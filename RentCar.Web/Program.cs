@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using RentCar.Application.Interfaces;
+using RentCar.Application.Services;
 using RentCar.Infrastructure.Data;
+using RentCar.Infrastructure.Interfaces;
+using RentCar.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +13,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlConnection"));
 });
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ICarService, CarService>();
 
 var app = builder.Build();
 
@@ -31,4 +38,10 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+app.MapGet("/", async (ICarService carService) => Results.Ok(await carService.GetAllAsync()));
+app.MapGet("/{id:guid}", async (Guid id, ICarService carService) =>
+{
+    var carDto = await carService.GetByIdAsync(id);
+    return carDto is not null ? Results.Ok(carDto) : Results.NotFound();
+});
 app.Run();
